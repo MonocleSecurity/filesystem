@@ -2228,8 +2228,8 @@ GHC_INLINE file_status symlink_status_ex(const path& p, std::error_code& ec, uin
     (void)sz;
     (void)nhl;
     (void)lwt;
-    struct ::stat fs;
-    auto result = ::lstat(p.c_str(), &fs);
+    struct ::stat64 fs;
+    auto result = ::lstat64(p.c_str(), &fs);
     if (result == 0) {
         ec.clear();
         file_status f_s = detail::file_status_from_st_mode(fs.st_mode);
@@ -2281,8 +2281,8 @@ GHC_INLINE file_status status_ex(const path& p, std::error_code& ec, file_status
     return detail::status_from_INFO(p, &attr, ec, sz, lwt);
 #else
     (void)recurse_count;
-    struct ::stat st;
-    auto result = ::lstat(p.c_str(), &st);
+    struct ::stat64 st;
+    auto result = ::lstat64(p.c_str(), &st);
     if (result == 0) {
         ec.clear();
         file_status fs = detail::file_status_from_st_mode(st.st_mode);
@@ -2290,7 +2290,7 @@ GHC_INLINE file_status status_ex(const path& p, std::error_code& ec, file_status
             *sls = fs;
         }
         if (fs.type() == file_type::symlink) {
-            result = ::stat(p.c_str(), &st);
+            result = ::stat64(p.c_str(), &st);
             if (result == 0) {
                 fs = detail::file_status_from_st_mode(st.st_mode);
             }
@@ -3824,7 +3824,7 @@ GHC_INLINE bool copy_file(const path& from, const path& to, copy_options options
 #else
     std::vector<char> buffer(16384, '\0');
     int in = -1, out = -1;
-    if ((in = ::open(from.c_str(), O_RDONLY)) < 0) {
+    if ((in = ::open64(from.c_str(), O_RDONLY)) < 0) {
         ec = detail::make_system_error();
         return false;
     }
@@ -3832,7 +3832,7 @@ GHC_INLINE bool copy_file(const path& from, const path& to, copy_options options
     if (!overwrite) {
         mode |= O_EXCL;
     }
-    if ((out = ::open(to.c_str(), mode, static_cast<int>(sf.permissions() & perms::all))) < 0) {
+    if ((out = ::open64(to.c_str(), mode, static_cast<int>(sf.permissions() & perms::all))) < 0) {
         ec = detail::make_system_error();
         ::close(in);
         return false;
@@ -3992,8 +3992,8 @@ GHC_INLINE bool create_directory(const path& p, const path& attributes, std::err
 #else
     ::mode_t attribs = static_cast<mode_t>(perms::all);
     if (!attributes.empty()) {
-        struct ::stat fileStat;
-        if (::stat(attributes.c_str(), &fileStat) != 0) {
+        struct ::stat64 fileStat;
+        if (::stat64(attributes.c_str(), &fileStat) != 0) {
             ec = detail::make_system_error();
             return false;
         }
@@ -4178,10 +4178,10 @@ GHC_INLINE bool equivalent(const path& p1, const path& p2, std::error_code& ec) 
     return inf1.ftLastWriteTime.dwLowDateTime == inf2.ftLastWriteTime.dwLowDateTime && inf1.ftLastWriteTime.dwHighDateTime == inf2.ftLastWriteTime.dwHighDateTime && inf1.nFileIndexHigh == inf2.nFileIndexHigh && inf1.nFileIndexLow == inf2.nFileIndexLow &&
            inf1.nFileSizeHigh == inf2.nFileSizeHigh && inf1.nFileSizeLow == inf2.nFileSizeLow && inf1.dwVolumeSerialNumber == inf2.dwVolumeSerialNumber;
 #else
-    struct ::stat s1, s2;
-    auto rc1 = ::stat(p1.c_str(), &s1);
+    struct ::stat64 s1, s2;
+    auto rc1 = ::stat64(p1.c_str(), &s1);
     auto e1 = errno;
-    auto rc2 = ::stat(p2.c_str(), &s2);
+    auto rc2 = ::stat64(p2.c_str(), &s2);
     if (rc1 || rc2) {
 #ifdef LWG_2937_BEHAVIOUR
         ec = detail::make_system_error(e1 ? e1 : errno);
@@ -4219,8 +4219,8 @@ GHC_INLINE uintmax_t file_size(const path& p, std::error_code& ec) noexcept
     }
     return static_cast<uintmax_t>(attr.nFileSizeHigh) << (sizeof(attr.nFileSizeHigh) * 8) | attr.nFileSizeLow;
 #else
-    struct ::stat fileStat;
-    if (::stat(p.c_str(), &fileStat) == -1) {
+    struct ::stat64 fileStat;
+    if (::stat64(p.c_str(), &fileStat) == -1) {
         ec = detail::make_system_error();
         return static_cast<uintmax_t>(-1);
     }
@@ -4488,8 +4488,8 @@ GHC_INLINE void last_write_time(const path& p, file_time_type new_time, std::err
 #elif defined(GHC_OS_MACOS)
 #ifdef __MAC_OS_X_VERSION_MIN_REQUIRED
 #if __MAC_OS_X_VERSION_MIN_REQUIRED < 101300
-    struct ::stat fs;
-    if (::stat(p.c_str(), &fs) == 0) {
+    struct ::stat64 fs;
+    if (::stat64(p.c_str(), &fs) == 0) {
         struct ::timeval tv[2];
         tv[0].tv_sec = fs.st_atimespec.tv_sec;
         tv[0].tv_usec = static_cast<int>(fs.st_atimespec.tv_nsec / 1000);
@@ -4870,8 +4870,8 @@ GHC_INLINE space_info space(const path& p, std::error_code& ec) noexcept
     }
     return {static_cast<uintmax_t>(totalNumberOfBytes.QuadPart), static_cast<uintmax_t>(totalNumberOfFreeBytes.QuadPart), static_cast<uintmax_t>(freeBytesAvailableToCaller.QuadPart)};
 #else
-    struct ::statvfs sfs;
-    if (::statvfs(p.c_str(), &sfs) != 0) {
+    struct ::statvfs64 sfs;
+    if (::statvfs64(p.c_str(), &sfs) != 0) {
         ec = detail::make_system_error();
         return {static_cast<uintmax_t>(-1), static_cast<uintmax_t>(-1), static_cast<uintmax_t>(-1)};
     }
